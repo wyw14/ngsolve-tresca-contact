@@ -1,9 +1,35 @@
-"""Data-only numeric wire encoding; preserve malformed returned fields as data."""
+"""Typed data transport with literal mappings and exact NumPy dtypes."""
+import base64
 import math
 import numpy as np
 import ngsolve as ng
 from collections import Counter
 from netgen.meshing import Mesh, MeshPoint, Pnt, Element3D, Element2D, FaceDescriptor
+
+
+def _pack_array(value):
+    if value.dtype.kind not in 'biufcSU':
+        raise ValueError('Unsupported array dtype')
+    return {'dtype': value.dtype.str, 'shape': list(value.shape),
+             'base64': base64.b64encode(value.tobytes(order='C')).decode('ascii')}
+
+
+def _unpack_array(payload, numeric_only=False):
+    if not isinstance(payload, dict) or set(payload) != {'dtype', 'shape', 'base64'}:
+        raise ValueError('Invalid array envelope')
+    if not isinstance(payload['dtype'], str):
+        raise ValueError('Invalid array dtype')
+    dtype = np.dtype(payload['dtype'])
+    allowed = 'biufc' if numeric_only else 'biufcSU'
+    if dtype.kind not in allowed or dtype.hasobject or dtype.itemsize <= 0:
+        raise ValueError('Unsupported array dtype')
+    shape = payload['shape']
+    if not isinstance(shape, list) or any(type(n) is not int or n < 0 for n in shape):
+        raise ValueError('Invalid array shape')
+    raw = base64.b64decode(payload['base64'], validate=True)
+    if len(raw) != math.prod(shape) * dtype.itemsize:
+        raise ValueError('Array byte count does not match shape and dtype')
+    return np.frombuffer(raw, dtype=dtype).copy().reshape(tuple(shape))
 
 
 def encode(value):
@@ -14,14 +40,12 @@ def encode(value):
         tets = np.array([[vertex.nr for vertex in element.vertices]
                          for element in value.Elements(ng.VOL)], dtype=int)
         return {'__wire_ngsolve_mesh__': encode({'points': points, 'tets': tets})}
+    if isinstance(value, np.ndarray):
+        return {'__wire_array__': _pack_array(value)}
+    if isinstance(value, np.generic):
+        return {'__wire_scalar__': _pack_array(np.asarray(value))}
     if isinstance(value, float) and not math.isfinite(value):
         return {'__wire_float__': 'nan' if math.isnan(value) else '+inf' if value > 0 else '-inf'}
-    if isinstance(value, np.ndarray):
-        if value.dtype.kind not in 'biufc':
-            raise ValueError('Only numeric arrays are supported')
-        return {'__wire_array__': {'shape': list(value.shape), 'data': encode(value.ravel().tolist())}}
-    if isinstance(value, np.generic):
-        return encode(value.item())
     if isinstance(value, complex):
         return {'__wire_complex__': [encode(value.real), encode(value.imag)]}
     if isinstance(value, tuple):
@@ -29,33 +53,39 @@ def encode(value):
     if isinstance(value, list):
         return [encode(x) for x in value]
     if isinstance(value, dict):
-        return {key: encode(x) for key, x in value.items()}
+        return {'__wire_dict__': [[encode(key), encode(item)] for key, item in value.items()]}
     return value
 
 
 def encode_output(value, _depth=0):
-    """A bad returned field is an ordinary mismatch, not a worker crash."""
+    """A malformed field stays local data rather than failing the worker."""
     if _depth > 24:
         return {'__invalid_output__': 'nested value exceeds numeric output structure'}
     if isinstance(value, dict):
-        result = {}
+        entries = []
+        used = set()
         for index, (key, item) in enumerate(value.items()):
             if not isinstance(key, str):
                 key = '__invalid_output_key_' + str(index)
-                while key in value or key in result:
+                while key in value or key in used:
                     key += '_'
+            used.add(key)
             try:
-                result[key] = encode_output(item, _depth + 1)
+                encoded = encode_output(item, _depth + 1)
             except Exception:
-                result[key] = {'__invalid_output__': 'unencodable field'}
-        return result
+                encoded = {'__invalid_output__': 'unencodable field'}
+            entries.append([encode(key), encoded])
+        return {'__wire_dict__': entries}
     if isinstance(value, (list, tuple)):
         items = [encode_output(item, _depth + 1) for item in value]
         return {'__wire_tuple__': items} if isinstance(value, tuple) else items
     if isinstance(value, np.ndarray) and value.dtype.kind not in 'biufc':
         return {'__invalid_output__': 'nonnumeric array'}
     if isinstance(value, np.generic):
-        return encode_output(value.item(), _depth + 1)
+        try:
+            return {'__wire_scalar__': _pack_array(np.asarray(value))}
+        except Exception:
+            return {'__invalid_output__': 'unsupported NumPy scalar'}
     if value is None or isinstance(value, (str, bool, int, float, complex, np.ndarray)):
         try:
             return encode(value)
@@ -64,24 +94,52 @@ def encode_output(value, _depth=0):
     return {'__invalid_output__': 'unsupported value type'}
 
 
-def decode(value):
+def _decode_data(value, _depth=0, *, numeric_only=False, decoder=None):
+    if _depth > 24:
+        return {'__invalid_output__': 'nested value exceeds numeric output structure'}
+    recurse = decoder if decoder is not None else lambda item: _decode_data(
+        item, _depth + 1, numeric_only=numeric_only)
     if isinstance(value, list):
-        return [decode(x) for x in value]
-    if isinstance(value, dict):
-        if set(value) == {'__wire_ngsolve_mesh__'}:
-            data = decode(value['__wire_ngsolve_mesh__'])
-            return make_mesh(data['points'], data['tets'])
+        return [recurse(item) for item in value]
+    if not isinstance(value, dict):
+        return value
+    try:
+        if set(value) == {'__wire_dict__'}:
+            entries = value['__wire_dict__']
+            if not isinstance(entries, list) or any(
+                    not isinstance(pair, list) or len(pair) != 2 for pair in entries):
+                raise ValueError('Invalid mapping envelope')
+            # Return the reconstructed mapping directly. Its literal keys are
+            # user data and must never be interpreted again as wire tags.
+            return {recurse(key): recurse(item) for key, item in entries}
         if set(value) == {'__wire_float__'}:
             return {'nan': float('nan'), '+inf': float('inf'), '-inf': float('-inf')}[value['__wire_float__']]
         if set(value) == {'__wire_complex__'}:
-            return complex(*(decode(x) for x in value['__wire_complex__']))
+            return complex(*(recurse(item) for item in value['__wire_complex__']))
         if set(value) == {'__wire_tuple__'}:
-            return tuple(decode(x) for x in value['__wire_tuple__'])
+            return tuple(recurse(item) for item in value['__wire_tuple__'])
         if set(value) == {'__wire_array__'}:
-            data = value['__wire_array__']
-            return np.asarray(decode(data['data'])).reshape(tuple(data['shape']))
-        return {key: decode(x) for key, x in value.items()}
-    return value
+            return _unpack_array(value['__wire_array__'], numeric_only=numeric_only)
+        if set(value) == {'__wire_scalar__'}:
+            scalar = _unpack_array(value['__wire_scalar__'], numeric_only=numeric_only)
+            if scalar.shape != ():
+                raise ValueError('NumPy scalar must have zero dimensions')
+            return scalar[()]
+        if set(value) == {'__wire_ngsolve_mesh__'}:
+            return {'__invalid_output__': 'native mesh is not a numeric output',
+                     'raw_native_wire': value['__wire_ngsolve_mesh__']}
+    except Exception:
+        return {'__invalid_output__': 'malformed numeric wire value', 'raw': value}
+    return {key: recurse(item) for key, item in value.items()}
+
+
+def decode(value):
+    if isinstance(value, list):
+        return [decode(x) for x in value]
+    if isinstance(value, dict) and set(value) == {'__wire_ngsolve_mesh__'}:
+        data = decode(value['__wire_ngsolve_mesh__'])
+        return make_mesh(data['points'], data['tets'])
+    return _decode_data(value, decoder=decode)
 
 
 def make_mesh(points, tets):
@@ -104,26 +162,6 @@ def make_mesh(points, tets):
 
 
 def decode_output(value, _depth=0):
-    """Decode numeric returned data without reconstructing native objects."""
-    if _depth > 24:
-        return {'__invalid_output__': 'nested value exceeds numeric output structure'}
-    if isinstance(value, list):
-        return [decode_output(item, _depth+1) for item in value]
-    if isinstance(value, dict):
-        if set(value) == {'__wire_ngsolve_mesh__'}:
-            return {'__invalid_output__': 'native mesh is not a numeric output',
-                    'raw_native_wire': value['__wire_ngsolve_mesh__']}
-        try:
-            if set(value) == {'__wire_float__'}:
-                return {'nan':float('nan'), '+inf':float('inf'), '-inf':float('-inf')}[value['__wire_float__']]
-            if set(value) == {'__wire_complex__'}:
-                return complex(*(decode_output(item, _depth+1) for item in value['__wire_complex__']))
-            if set(value) == {'__wire_tuple__'}:
-                return tuple(decode_output(item, _depth+1) for item in value['__wire_tuple__'])
-            if set(value) == {'__wire_array__'}:
-                item = value['__wire_array__']
-                return np.asarray(decode_output(item['data'], _depth+1)).reshape(tuple(item['shape']))
-        except Exception:
-            return {'__invalid_output__': 'malformed numeric wire value', 'raw':value}
-        return {key:decode_output(item, _depth+1) for key,item in value.items()}
-    return value
+    """Decode numeric returned data without constructing native objects."""
+    return _decode_data(value, _depth, numeric_only=True)
+
