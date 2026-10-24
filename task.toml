@@ -1,0 +1,23 @@
+schema_version = "1.4"
+artifacts = ["/app/src"]
+[task]
+name = "local/07-ngsolve-tresca-contact"
+version = "1.0.1"
+description = "Incremental nodal Tresca contact histories of native P1 elastic solids"
+authors = [{ name = "wyw" }]
+[agent]
+timeout_sec = 10800
+[environment]
+network_mode = "public"
+build_timeout_sec = 1800
+cpus = 2
+memory_mb = 4096
+storage_mb = 8192
+gpus = 0
+[verifier]
+environment_mode = "separate"
+user = "root"
+timeout_sec = 1200
+[metadata]
+category = "D.7 化学与材料"
+difficulty = "hard"
