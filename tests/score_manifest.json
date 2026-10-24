@@ -1,0 +1,202 @@
+{
+  "schema_version": 1,
+  "test_files": [
+    "test_history.py"
+  ],
+  "groups": [
+    {
+      "id": "upper_displacements",
+      "weight": "3/20",
+      "basis": "Every upper-body vertex at every prescribed increment",
+      "nodes": [
+        "test_history.py::test_independent_physical_outputs[cycle-upper_displacements]",
+        "test_history.py::test_independent_physical_outputs[frictionless-upper_displacements]",
+        "test_history.py::test_independent_physical_outputs[mixed-zero-gap-upper_displacements]",
+        "test_history.py::test_independent_physical_outputs[zero-pressure-shear-upper_displacements]",
+        "test_history.py::test_independent_physical_outputs[local-compliance-upper_displacements]",
+        "test_history.py::test_independent_physical_outputs[rotated-upper_displacements]",
+        "test_history.py::test_independent_physical_outputs[scaled-upper_displacements]",
+        "test_history.py::test_independent_physical_outputs[micro-gap-rotation-0-upper_displacements]",
+        "test_history.py::test_independent_physical_outputs[micro-gap-rotation-1-upper_displacements]",
+        "test_history.py::test_independent_physical_outputs[micro-gap-rotation-2-upper_displacements]",
+        "test_history.py::test_independent_physical_outputs[micro-gap-rotation-3-upper_displacements]",
+        "test_history.py::test_independent_physical_outputs[zero-pressure-rotated-stick-upper_displacements]"
+      ]
+    },
+    {
+      "id": "lower_displacements",
+      "weight": "3/20",
+      "basis": "Every lower-body vertex at every prescribed increment",
+      "nodes": [
+        "test_history.py::test_independent_physical_outputs[cycle-lower_displacements]",
+        "test_history.py::test_independent_physical_outputs[frictionless-lower_displacements]",
+        "test_history.py::test_independent_physical_outputs[mixed-zero-gap-lower_displacements]",
+        "test_history.py::test_independent_physical_outputs[zero-pressure-shear-lower_displacements]",
+        "test_history.py::test_independent_physical_outputs[local-compliance-lower_displacements]",
+        "test_history.py::test_independent_physical_outputs[rotated-lower_displacements]",
+        "test_history.py::test_independent_physical_outputs[scaled-lower_displacements]",
+        "test_history.py::test_independent_physical_outputs[micro-gap-rotation-0-lower_displacements]",
+        "test_history.py::test_independent_physical_outputs[micro-gap-rotation-1-lower_displacements]",
+        "test_history.py::test_independent_physical_outputs[micro-gap-rotation-2-lower_displacements]",
+        "test_history.py::test_independent_physical_outputs[micro-gap-rotation-3-lower_displacements]",
+        "test_history.py::test_independent_physical_outputs[zero-pressure-rotated-stick-lower_displacements]"
+      ]
+    },
+    {
+      "id": "contact_forces",
+      "weight": "1/5",
+      "basis": "Every global Cartesian interface force at every increment",
+      "nodes": [
+        "test_history.py::test_independent_physical_outputs[cycle-contact_forces]",
+        "test_history.py::test_independent_physical_outputs[frictionless-contact_forces]",
+        "test_history.py::test_independent_physical_outputs[mixed-zero-gap-contact_forces]",
+        "test_history.py::test_independent_physical_outputs[zero-pressure-shear-contact_forces]",
+        "test_history.py::test_independent_physical_outputs[local-compliance-contact_forces]",
+        "test_history.py::test_independent_physical_outputs[rotated-contact_forces]",
+        "test_history.py::test_independent_physical_outputs[scaled-contact_forces]",
+        "test_history.py::test_independent_physical_outputs[micro-gap-rotation-0-contact_forces]",
+        "test_history.py::test_independent_physical_outputs[micro-gap-rotation-1-contact_forces]",
+        "test_history.py::test_independent_physical_outputs[micro-gap-rotation-2-contact_forces]",
+        "test_history.py::test_independent_physical_outputs[micro-gap-rotation-3-contact_forces]",
+        "test_history.py::test_independent_physical_outputs[zero-pressure-rotated-stick-contact_forces]"
+      ]
+    },
+    {
+      "id": "elastic_energies",
+      "weight": "1/10",
+      "basis": "Complete elastic storage history",
+      "nodes": [
+        "test_history.py::test_independent_physical_outputs[cycle-elastic_energies]",
+        "test_history.py::test_independent_physical_outputs[frictionless-elastic_energies]",
+        "test_history.py::test_independent_physical_outputs[mixed-zero-gap-elastic_energies]",
+        "test_history.py::test_independent_physical_outputs[zero-pressure-shear-elastic_energies]",
+        "test_history.py::test_independent_physical_outputs[local-compliance-elastic_energies]",
+        "test_history.py::test_independent_physical_outputs[rotated-elastic_energies]",
+        "test_history.py::test_independent_physical_outputs[scaled-elastic_energies]",
+        "test_history.py::test_independent_physical_outputs[micro-gap-rotation-0-elastic_energies]",
+        "test_history.py::test_independent_physical_outputs[micro-gap-rotation-1-elastic_energies]",
+        "test_history.py::test_independent_physical_outputs[micro-gap-rotation-2-elastic_energies]",
+        "test_history.py::test_independent_physical_outputs[micro-gap-rotation-3-elastic_energies]",
+        "test_history.py::test_independent_physical_outputs[zero-pressure-rotated-stick-elastic_energies]"
+      ]
+    },
+    {
+      "id": "cumulative_dissipation",
+      "weight": "1/10",
+      "basis": "Complete irreversible accumulated dissipation history",
+      "nodes": [
+        "test_history.py::test_independent_physical_outputs[cycle-cumulative_dissipation]",
+        "test_history.py::test_independent_physical_outputs[frictionless-cumulative_dissipation]",
+        "test_history.py::test_independent_physical_outputs[mixed-zero-gap-cumulative_dissipation]",
+        "test_history.py::test_independent_physical_outputs[zero-pressure-shear-cumulative_dissipation]",
+        "test_history.py::test_independent_physical_outputs[local-compliance-cumulative_dissipation]",
+        "test_history.py::test_independent_physical_outputs[rotated-cumulative_dissipation]",
+        "test_history.py::test_independent_physical_outputs[scaled-cumulative_dissipation]",
+        "test_history.py::test_independent_physical_outputs[micro-gap-rotation-0-cumulative_dissipation]",
+        "test_history.py::test_independent_physical_outputs[micro-gap-rotation-1-cumulative_dissipation]",
+        "test_history.py::test_independent_physical_outputs[micro-gap-rotation-2-cumulative_dissipation]",
+        "test_history.py::test_independent_physical_outputs[micro-gap-rotation-3-cumulative_dissipation]",
+        "test_history.py::test_independent_physical_outputs[zero-pressure-rotated-stick-cumulative_dissipation]"
+      ]
+    },
+    {
+      "id": "contact_laws",
+      "weight": "3/20",
+      "basis": "Full-increment unilateral gap/force/Tresca consistency",
+      "nodes": [
+        "test_history.py::test_normal_and_friction_laws[cycle]",
+        "test_history.py::test_normal_and_friction_laws[frictionless]",
+        "test_history.py::test_normal_and_friction_laws[mixed-zero-gap]",
+        "test_history.py::test_normal_and_friction_laws[zero-pressure-shear]",
+        "test_history.py::test_normal_and_friction_laws[local-compliance]",
+        "test_history.py::test_normal_and_friction_laws[rotated]",
+        "test_history.py::test_normal_and_friction_laws[scaled]",
+        "test_history.py::test_normal_and_friction_laws[micro-gap-rotation-0]",
+        "test_history.py::test_normal_and_friction_laws[micro-gap-rotation-1]",
+        "test_history.py::test_normal_and_friction_laws[micro-gap-rotation-2]",
+        "test_history.py::test_normal_and_friction_laws[micro-gap-rotation-3]",
+        "test_history.py::test_normal_and_friction_laws[zero-pressure-rotated-stick]"
+      ]
+    },
+    {
+      "id": "dissipation_work",
+      "weight": "2/25",
+      "basis": "Every-increment slip work, sign and cumulative consistency",
+      "nodes": [
+        "test_history.py::test_dissipation_is_accumulated[cycle]",
+        "test_history.py::test_dissipation_is_accumulated[frictionless]",
+        "test_history.py::test_dissipation_is_accumulated[mixed-zero-gap]",
+        "test_history.py::test_dissipation_is_accumulated[zero-pressure-shear]",
+        "test_history.py::test_dissipation_is_accumulated[local-compliance]",
+        "test_history.py::test_dissipation_is_accumulated[rotated]",
+        "test_history.py::test_dissipation_is_accumulated[scaled]",
+        "test_history.py::test_dissipation_is_accumulated[micro-gap-rotation-0]",
+        "test_history.py::test_dissipation_is_accumulated[micro-gap-rotation-1]",
+        "test_history.py::test_dissipation_is_accumulated[micro-gap-rotation-2]",
+        "test_history.py::test_dissipation_is_accumulated[micro-gap-rotation-3]",
+        "test_history.py::test_dissipation_is_accumulated[zero-pressure-rotated-stick]"
+      ]
+    },
+    {
+      "id": "single_increment_repeat",
+      "weight": "3/100",
+      "basis": "All five physical outputs in independent one-step and repeated calls",
+      "nodes": [
+        "test_history.py::test_single_increment_and_repeat_field[0-upper_displacements]",
+        "test_history.py::test_single_increment_and_repeat_field[0-lower_displacements]",
+        "test_history.py::test_single_increment_and_repeat_field[0-contact_forces]",
+        "test_history.py::test_single_increment_and_repeat_field[0-cumulative_dissipation]",
+        "test_history.py::test_single_increment_and_repeat_field[0-elastic_energies]",
+        "test_history.py::test_single_increment_and_repeat_field[1-upper_displacements]",
+        "test_history.py::test_single_increment_and_repeat_field[1-lower_displacements]",
+        "test_history.py::test_single_increment_and_repeat_field[1-contact_forces]",
+        "test_history.py::test_single_increment_and_repeat_field[1-cumulative_dissipation]",
+        "test_history.py::test_single_increment_and_repeat_field[1-elastic_energies]"
+      ]
+    },
+    {
+      "id": "complete_schema",
+      "weight": "1/100",
+      "basis": "Five complete finite float arrays on every selected valid invocation",
+      "nodes": [
+        "test_history.py::test_complete_schema[cycle]",
+        "test_history.py::test_complete_schema[frictionless]",
+        "test_history.py::test_complete_schema[mixed-zero-gap]",
+        "test_history.py::test_complete_schema[zero-pressure-shear]",
+        "test_history.py::test_complete_schema[local-compliance]",
+        "test_history.py::test_complete_schema[rotated]",
+        "test_history.py::test_complete_schema[scaled]",
+        "test_history.py::test_complete_schema[micro-gap-rotation-0]",
+        "test_history.py::test_complete_schema[micro-gap-rotation-1]",
+        "test_history.py::test_complete_schema[micro-gap-rotation-2]",
+        "test_history.py::test_complete_schema[micro-gap-rotation-3]",
+        "test_history.py::test_complete_schema[zero-pressure-rotated-stick]",
+        "test_history.py::test_single_increment_schema[0-0]",
+        "test_history.py::test_single_increment_schema[0-1]",
+        "test_history.py::test_single_increment_schema[1-0]",
+        "test_history.py::test_single_increment_schema[1-1]"
+      ]
+    },
+    {
+      "id": "argument_rejection",
+      "weight": "1/50",
+      "basis": "Malformed arrays raise the documented ValueError",
+      "nodes": [
+        "test_history.py::test_invalid_arrays_raise_value_error[negative-threshold]",
+        "test_history.py::test_invalid_arrays_raise_value_error[zero-area]",
+        "test_history.py::test_invalid_arrays_raise_value_error[nonunit-normal]",
+        "test_history.py::test_invalid_arrays_raise_value_error[nonfinite-boundary]",
+        "test_history.py::test_invalid_arrays_raise_value_error[bad-vertex]"
+      ],
+      "intent": "rejection"
+    },
+    {
+      "id": "input_preservation",
+      "weight": "1/100",
+      "basis": "Trusted worker snapshots preserve native mesh coordinates/connectivity and all numeric inputs",
+      "nodes": [],
+      "measurement": "input_preservation"
+    }
+  ],
+  "hard_gates": []
+}

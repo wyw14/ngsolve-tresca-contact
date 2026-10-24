@@ -32,32 +32,73 @@ def scales(data):
     return {key: U if 'displacements' in key else F if key=='contact_forces' else F*U for key in KEYS}
 
 
+class Deferred:
+    """Cache a raw protected call; format and purity do not mask fields."""
+    def __init__(self, args):
+        self.args = args
+        self.loaded, self.result, self.error = False, None, None
+
+    def load(self):
+        if not self.loaded:
+            self.loaded = True
+            try:
+                self.result = solve_history(*self.args)
+            except Exception as error:
+                self.error = error
+
+    def get(self):
+        self.load()
+        if self.error is not None:
+            raise self.error
+        return self.result
+
+
+def field_value(actual, expected, field):
+    assert isinstance(actual, dict), 'output must be a dictionary'
+    assert field in actual, 'missing field: '+field
+    value = np.asarray(actual[field])
+    assert value.shape == expected[field].shape, (field, value.shape, expected[field].shape)
+    assert value.dtype.kind == 'f' and np.all(np.isfinite(value)), field
+    return value
+
+
+def complete_schema(actual, expected):
+    assert isinstance(actual, dict) and set(actual) == set(KEYS), 'output keys'
+    for field in KEYS:
+        field_value(actual, expected, field)
+
+
+def compare_field(actual, expected, data, field):
+    value = field_value(actual, expected, field)
+    np.testing.assert_allclose(value, expected[field], rtol=3e-6,
+        atol=3e-7*scales(data)[field], err_msg=field)
+
+
+def required_fields(actual, expected, fields):
+    return {field:field_value(actual, expected, field) for field in fields}
+
+
 @pytest.fixture(scope='module', params=CASES)
 def computed(request):
     data, expected = load(request.param)
-    before = {key: value.copy() for key, value in data.items()}
     args = arguments(data)
-    mesh_vertices = [np.array([tuple(v.point) for v in mesh.vertices]) for mesh in args[:2]]
-    result = solve_history(*args)
-    for key in data:
-        np.testing.assert_array_equal(data[key], before[key])
-    for mesh, vertices in zip(args[:2], mesh_vertices):
-        np.testing.assert_array_equal(np.array([tuple(v.point) for v in mesh.vertices]), vertices)
-    assert isinstance(result, dict) and set(result) == set(KEYS)
-    return request.param, data, expected, result
+    return request.param, data, expected, Deferred(args)
+
+
+def test_complete_schema(computed):
+    _, data, expected, actual = computed
+    complete_schema(actual.get(), expected)
 
 
 @pytest.mark.parametrize('field', KEYS)
 def test_independent_physical_outputs(computed, field):
-    name, data, expected, result = computed
-    actual = np.asarray(result[field])
-    assert actual.shape == expected[field].shape, (name, field, actual.shape)
-    assert actual.dtype.kind == 'f' and np.all(np.isfinite(actual))
-    np.testing.assert_allclose(actual, expected[field], rtol=3e-6, atol=3e-7*scales(data)[field])
+    _, data, expected, actual = computed
+    compare_field(actual.get(), expected, data, field)
 
 
 def test_normal_and_friction_laws(computed):
-    _, data, expected, result = computed
+    _, data, expected, raw = computed
+    result = required_fields(raw.get(), expected, ['upper_displacements', 'lower_displacements', 'contact_forces'])
     up, low = data['contact_pairs'].T
     n = data['normal']; area = data['contact_areas']; limits = area*data['tresca_thresholds']
     jump = result['upper_displacements'][:, up]-result['lower_displacements'][:, low]
@@ -83,9 +124,9 @@ def test_normal_and_friction_laws(computed):
     opened = gap > 10*tol_u
     assert np.all(np.linalg.norm(force[opened], axis=1) <= 10*tol_f)
 
-
 def test_dissipation_is_accumulated(computed):
-    _, data, expected, result = computed
+    _, data, expected, raw = computed
+    result = required_fields(raw.get(), expected, ['upper_displacements', 'lower_displacements', 'contact_forces', 'cumulative_dissipation'])
     tol = 3e-7*scales(data)['cumulative_dissipation']+3e-6*np.max(abs(expected['cumulative_dissipation']))
     D = result['cumulative_dissipation']
     assert np.min(D) >= -tol and np.min(np.diff(D), initial=0.) >= -2*tol
@@ -108,19 +149,35 @@ def test_dissipation_is_accumulated(computed):
     baseline_error=abs(np.diff(np.r_[0.,expected['cumulative_dissipation']])+np.sum(expected_tangent*expected_slip,axis=(1,2)))
     assert np.all(abs(np.diff(np.r_[0.,D])-actual_work) <= 2*tol+work_error+baseline_error)
 
-
-@pytest.mark.parametrize('index', [0, 1])
-def test_single_increment_and_repeat_call(index):
-    data, expected = load('cycle')
+@pytest.fixture(scope='module', params=[0,1], ids=['0','1'])
+def single_increment(request):
+    index = request.param
+    data, original_expected = load('cycle')
     for side in ['upper', 'lower']:
         data[side+'_boundary'] = data[side+'_boundary'][index:index+1].copy()
+    expected = {field:value[index:index+1].copy() for field,value in original_expected.items()}
     args = arguments(data)
-    first = solve_history(*args)
-    second = solve_history(*args)
-    for field in KEYS:
-        scale = scales(data)[field]
-        np.testing.assert_allclose(first[field], expected[field][index:index+1], rtol=3e-6, atol=3e-7*scale)
-        np.testing.assert_allclose(second[field], first[field], rtol=3e-6, atol=3e-7*scale)
+    results = [Deferred(args), Deferred(args)]
+    for result in results:
+        result.load()
+    return index, data, expected, results
+
+
+@pytest.mark.parametrize('repetition', [0,1])
+def test_single_increment_schema(single_increment, repetition):
+    _, data, expected, results = single_increment
+    complete_schema(results[repetition].get(), expected)
+
+
+@pytest.mark.parametrize('field', KEYS)
+def test_single_increment_and_repeat_field(single_increment, field):
+    _, data, expected, results = single_increment
+    first, second = (result.get() for result in results)
+    compare_field(first, expected, data, field)
+    compare_field(second, expected, data, field)
+    np.testing.assert_allclose(field_value(second, expected, field),
+        field_value(first, expected, field), rtol=3e-6,
+        atol=3e-7*scales(data)[field], err_msg=field)
 
 
 @pytest.mark.parametrize('kind', ['negative-threshold', 'zero-area', 'nonunit-normal', 'nonfinite-boundary', 'bad-vertex'])

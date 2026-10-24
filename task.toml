@@ -2,7 +2,7 @@ schema_version = "1.4"
 artifacts = ["/app/src"]
 [task]
 name = "local/07-ngsolve-tresca-contact"
-version = "1.0.1"
+version = "1.0.2"
 description = "Incremental nodal Tresca contact histories of native P1 elastic solids"
 authors = [{ name = "wyw" }]
 [agent]
